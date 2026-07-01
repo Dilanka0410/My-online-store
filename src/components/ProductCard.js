@@ -15,6 +15,9 @@ function ProductCard({ product }) {
       <div>
         <h3 style={{ margin: 0 }}>{product.name}</h3>
         <p style={{ margin: '6px 0 0', color: '#4b5563' }}>LKR {product.price}</p>
+        <p style={{ margin: '8px 0 0', color: '#6b7280', fontSize: 14 }}>
+          {product.description || 'A great product from our store.'}
+        </p>
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
         <Link to={`/product/${product.id}`} style={{ textDecoration: 'none', color: '#2563eb', flex: 1, textAlign: 'center', padding: '8px 12px', border: '1px solid #2563eb', borderRadius: 8 }}>

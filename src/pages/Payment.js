@@ -24,7 +24,8 @@ function Payment() {
       setUser({ name: customerName || 'Guest' });
 
       const orderPayload = {
-        customerName: customerName || 'Guest',
+        customerName: customerName || user?.fullName || 'Guest',
+        customerEmail: user?.email || '',
         items,
         totalAmount,
       };
