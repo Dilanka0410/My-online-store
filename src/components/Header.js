@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import useUserStore from '../store/userStore';
@@ -13,14 +13,32 @@ function Header() {
   }));
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+
+  const emailPattern = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/, []);
 
   const handleLogin = (event) => {
     event.preventDefault();
-    if (!fullName.trim() && !email.trim()) return;
+
+    if (!fullName.trim()) {
+      setError('Full name is required.');
+      return;
+    }
+
+    if (!email.trim()) {
+      setError('Email is required.');
+      return;
+    }
+
+    if (!emailPattern.test(email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
 
     login({ fullName: fullName.trim(), email: email.trim() });
     setFullName('');
     setEmail('');
+    setError('');
   };
 
   return (
@@ -35,14 +53,17 @@ function Header() {
         <Link to="/orders" style={{ color: 'white', textDecoration: 'none' }}>Orders</Link>
 
         {user ? (
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <span style={{ color: '#d1d5db', fontSize: 14 }}>{welcomeMessage}</span>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ color: '#d1d5db', fontSize: 14 }}>
+              <div>{welcomeMessage}</div>
+              <div>{user.email}</div>
+            </div>
             <button onClick={logout} style={{ border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}>
               Logout
             </button>
           </div>
         ) : (
-          <form onSubmit={handleLogin} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <form onSubmit={handleLogin} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <input
               value={fullName}
               onChange={(event) => setFullName(event.target.value)}
@@ -51,7 +72,10 @@ function Header() {
             />
             <input
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                if (error) setError('');
+              }}
               placeholder="Email"
               type="email"
               style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db' }}
@@ -59,6 +83,7 @@ function Header() {
             <button type="submit" style={{ border: 'none', borderRadius: 6, padding: '8px 10px', cursor: 'pointer' }}>
               Login
             </button>
+            {error ? <span style={{ color: '#fca5a5', fontSize: 13 }}>{error}</span> : null}
           </form>
         )}
       </nav>

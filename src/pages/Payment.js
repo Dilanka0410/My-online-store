@@ -10,59 +10,95 @@ function Payment() {
   const dispatch = useDispatch();
   const { items, totalAmount } = useSelector((state) => state.cart);
   const user = useUserStore((state) => state.user);
-  const setUser = useUserStore((state) => state.setUser);
-  const [customerName, setCustomerName] = useState(user?.name || '');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleCompleteOrder = async () => {
+    if (!items || items.length === 0) {
+      setMessage('Your cart is empty.');
+      return;
+    }
+
     setLoading(true);
     setMessage('');
 
     try {
-      setUser({ name: customerName || 'Guest' });
+      const orderDate = new Date().toISOString();
 
+      // Build payload: include array of line items with required fields
       const orderPayload = {
-        customerName: customerName || user?.fullName || 'Guest',
+        customerName: user?.fullName || 'Guest',
         customerEmail: user?.email || '',
-        items,
-        totalAmount,
+        orderDate,
+        items: items.map((it) => ({
+          productId: it.id,
+          quantity: it.quantity || 1,
+          totalPrice: (it.price || 0) * (it.quantity || 1),
+        })),
+        totalPrice: totalAmount,
       };
 
-      const response = await placeOrder(orderPayload);
-      const storedOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-      storedOrders.unshift({ ...orderPayload, createdAt: new Date().toISOString() });
-      localStorage.setItem('orders', JSON.stringify(storedOrders));
+      const result = await placeOrder(orderPayload);
 
-      dispatch(clearCart());
-      setMessage(response.message || 'Order placed successfully');
-      navigate('/orders');
-    } catch (error) {
-      setMessage(error.message || 'Unable to place order');
+      if (result && result.status === 201) {
+        setMessage('Order placed successfully. Redirecting to orders...');
+        dispatch(clearCart());
+        setTimeout(() => navigate('/orders'), 800);
+      } else {
+        setMessage('Unexpected response from server.');
+      }
+    } catch (err) {
+      setMessage(err?.message || 'Failed to place order.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: 700, margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: 900, margin: '0 auto' }}>
       <h2>Payment</h2>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <input
-          value={customerName}
-          onChange={(event) => setCustomerName(event.target.value)}
-          placeholder="Your name"
-          style={{ padding: '10px', borderRadius: 8, border: '1px solid #d1d5db' }}
-        />
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-          <p><strong>Total:</strong> LKR {totalAmount}</p>
-          <p><strong>Items:</strong> {items.length}</p>
-        </div>
-        <button type="submit" disabled={loading} style={{ background: '#111827', color: 'white', border: 'none', padding: '10px 14px', borderRadius: 8, cursor: 'pointer' }}>
-          {loading ? 'Placing order...' : 'Place Order'}
+
+      <section style={{ marginBottom: 16 }}>
+        <h3>Customer</h3>
+        <p><strong>Name:</strong> {user?.fullName || 'Guest'}</p>
+        <p><strong>Email:</strong> {user?.email || '—'}</p>
+      </section>
+
+      <section style={{ marginBottom: 16 }}>
+        <h3>Cart</h3>
+        {items && items.length > 0 ? (
+          <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              {items.map((it) => (
+                <li key={it.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{it.name}</div>
+                    <div style={{ color: '#6b7280' }}>{it.quantity} × LKR {it.price}</div>
+                  </div>
+                  <div style={{ fontWeight: 600 }}>LKR {(it.price || 0) * (it.quantity || 1)}</div>
+                </li>
+              ))}
+            </ul>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, fontWeight: 700 }}>
+              <div>Total</div>
+              <div>LKR {totalAmount}</div>
+            </div>
+          </div>
+        ) : (
+          <p>Your cart is empty.</p>
+        )}
+      </section>
+
+      <div style={{ display: 'flex', gap: 12 }}>
+        <button
+          onClick={handleCompleteOrder}
+          disabled={loading || !items || items.length === 0}
+          style={{ background: '#111827', color: 'white', border: 'none', padding: '10px 14px', borderRadius: 8, cursor: 'pointer' }}
+        >
+          {loading ? 'Completing order...' : 'Complete Order'}
         </button>
-      </form>
+      </div>
+
       {message && <p style={{ marginTop: 12 }}>{message}</p>}
     </div>
   );
